@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+
+    <BetterLoading_InitializingHugsLib>正在初始化 HugsLib 模组</BetterLoading_InitializingHugsLib>
+    <BetterLoading_InitializingMods>正在初始化所有模组</BetterLoading_InitializingMods>
+    <BetterLoading_Loading>载入中...</BetterLoading_Loading>
+    <BetterLoading_Current>当前阶段：{0}</BetterLoading_Current>
+
+</LanguageData>

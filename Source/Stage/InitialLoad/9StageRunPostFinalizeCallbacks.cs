@@ -1,13 +1,11 @@
-﻿using System;
+﻿using HarmonyLib;
+using System;
 using System.Collections.Generic;
 using System.Threading;
-using HarmonyLib;
 using Verse;
 
-namespace BetterLoading.Stage.InitialLoad
-{
-    public class StageRunPostFinalizeCallbacks : LoadingStage
-    {
+namespace BetterLoading.Stage.InitialLoad {
+    public class StageRunPostFinalizeCallbacks : LoadingStage {
         public static bool ShouldInterceptNext;
 
         private static int _numTasksToRun = 2;
@@ -21,54 +19,44 @@ namespace BetterLoading.Stage.InitialLoad
 
         private static StageRunPostFinalizeCallbacks? inst;
 
-        public StageRunPostFinalizeCallbacks(Harmony instance) : base(instance)
-        {
+        public StageRunPostFinalizeCallbacks(Harmony instance) : base(instance) {
         }
 
-        public override string GetStageName()
-        {
-            return "Running Post-Finalize Callbacks";
+        public override string GetStageName() {
+            return "正在运行完成后回调事件";
         }
 
-        public override string? GetCurrentStepName()
-        {
+        public override string? GetCurrentStepName() {
             if (_currentAction == null)
-                return "Waiting...";
+                return "等待中...";
 
-            return (_currentAction.Method.DeclaringType?.FullName ?? "<unknown anonymous method>") + (_currentAction.Target != null ? $" ({_currentAction.Target})" : "");
+            return (_currentAction.Method.DeclaringType?.FullName ?? "<未知匿名方法>") + (_currentAction.Target != null ? $" ({_currentAction.Target})" : "");
         }
 
-        public override bool IsCompleted()
-        {
+        public override bool IsCompleted() {
             return _finishedExecuting;
         }
 
-        public override int GetCurrentProgress()
-        {
+        public override int GetCurrentProgress() {
             return _numTasksRun;
         }
 
-        public override int GetMaximumProgress()
-        {
+        public override int GetMaximumProgress() {
             return _numTasksToRun;
         }
 
-        public override void BecomeActive()
-        {
+        public override void BecomeActive() {
             inst = LoadingScreen.GetStageInstance<StageRunPostFinalizeCallbacks>();
         }
 
-        public override void DoPatching(Harmony instance)
-        {
+        public override void DoPatching(Harmony instance) {
             instance.Patch(AccessTools.Method(typeof(LongEventHandler), "ExecuteToExecuteWhenFinished"), new HarmonyMethod(typeof(StageRunPostFinalizeCallbacks), nameof(PreExecToExecWhenFinished)));
             instance.Patch(AccessTools.Method(typeof(LongEventHandler), "UpdateCurrentSynchronousEvent"), new HarmonyMethod(typeof(StageRunPostFinalizeCallbacks), nameof(PreUpdateCurrentSynchronousEvent)));
         }
 
-        public static bool PreExecToExecWhenFinished(List<Action> ___toExecuteWhenFinished)
-        {
+        public static bool PreExecToExecWhenFinished(List<Action> ___toExecuteWhenFinished) {
             if (!ShouldInterceptNext) return true;
-            if (_hasBeenCalled)
-            {
+            if (_hasBeenCalled) {
                 //Don't let normal ExecuteToExecuteWhenFinished run while we're still executing, to avoid "Already executing" warnings
                 return _finishedExecuting;
             }
@@ -80,8 +68,7 @@ namespace BetterLoading.Stage.InitialLoad
 
             _finishedExecuting = false;
 
-            if (___toExecuteWhenFinished.Count == 0)
-            {
+            if (___toExecuteWhenFinished.Count == 0) {
                 _numTasksToRun = 1;
                 _finishedExecuting = true;
                 return false;
@@ -99,28 +86,24 @@ namespace BetterLoading.Stage.InitialLoad
                     ___toExecuteWhenFinished,
                     false,
                     currentAction => _currentAction = currentAction,
-                    () =>
-                    {
+                    () => {
                         _numTasksRun++;
                         //toExecuteWhenFinished actions themselves can call ExecuteWhenFinished and thus increase toExecuteWhenFinished count
                         _numTasksToRun = LongEventHandlerMirror.ToExecuteWhenFinished.Count;
                         BetterLoadingApi.DispatchChange(inst);
                     },
-                    () =>
-                    {
+                    () => {
                         if (initialNumTasksToRun != _numTasksToRun)
                             Log.Message($"[BetterLoading] Processed an additional {_numTasksToRun - initialNumTasksToRun} post-finalize tasks.");
                         _finishedExecuting = true;
                     })
             );
 
-            LongEventHandler.QueueLongEvent(() =>
-            {
+            LongEventHandler.QueueLongEvent(() => {
                 Thread.Sleep(500);
 
                 // Log.Message("[BetterLoading] Blocking loading screen from being dismissed until post-finalize actions are complete.");
-                while (!_finishedExecuting)
-                {
+                while (!_finishedExecuting) {
                     Thread.Sleep(500); //Wait
                 }
 
@@ -134,10 +117,8 @@ namespace BetterLoading.Stage.InitialLoad
             return false;
         }
 
-        public static bool PreUpdateCurrentSynchronousEvent(/*object ___currentEvent*/)
-        {
-            if (_hasBeenCalled)
-            {
+        public static bool PreUpdateCurrentSynchronousEvent(/*object ___currentEvent*/) {
+            if (_hasBeenCalled) {
                 //Don't let normal UpdateCurrentSynchronousEvent run while we're still executing, since some loading logic can rely on ExecuteToExecuteWhenFinished running synchronously
                 return _finishedExecuting;
             }

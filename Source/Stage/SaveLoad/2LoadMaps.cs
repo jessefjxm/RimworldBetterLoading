@@ -2,8 +2,7 @@
 using JetBrains.Annotations;
 using Verse;
 
-namespace BetterLoading.Stage.SaveLoad
-{
+namespace BetterLoading.Stage.SaveLoad {
     public class LoadMaps : LoadingStage {
         public static int NumMaps;
 
@@ -16,58 +15,50 @@ namespace BetterLoading.Stage.SaveLoad
 
         private static bool _allMapsLoaded;
 
-        public static void CountMaps()
-        {
-            if (!Scribe.EnterNode("maps")) 
+        public static void CountMaps() {
+            if (!Scribe.EnterNode("maps"))
                 return;
-            
-            try
-            {
+
+            try {
                 NumMaps = Scribe.loader.curXmlParent.ChildNodes.Count;
                 Log.Message($"[BetterLoading] This save file contains {NumMaps} map(s).");
-            }
-            finally
-            {
+            } finally {
                 //Make sure we absolutely exit the node because if we don't we risk corrupting the save file.
                 Scribe.ExitNode();
             }
         }
-        
-        public LoadMaps([NotNull] Harmony instance) : base(instance)
-        {
+
+        public LoadMaps([NotNull] Harmony instance) : base(instance) {
         }
 
-        public override string GetStageName()
-        {
-            return "Loading Maps";
+        public override string GetStageName() {
+            return "正在加载地图";
         }
 
-        public override string? GetCurrentStepName()
-        {
+        public override string? GetCurrentStepName() {
             if (_currMapNum == -1)
-                return "Waiting...";
-            
-            var text = $"Map {_currMapNum + 1} of {NumMaps}: ";
+                return "等待中...";
+
+            var text = $"地图 {_currMapNum + 1} / {NumMaps}: ";
 
             if (_currMapLoadedCompressed)
-                return text + "Loading Things";
+                return text + "加载物体中";
 
             if (_currMapLoadedComponents)
-                return text + "Loading Compressed Map Data";
+                return text + "加载压缩地图数据中";
 
             if (_currMapInitialized)
-                return text + "Loading Components";
+                return text + "加载组件中";
 
-            return text + "Reading Data";
+            return text + "读取数据中";
         }
 
-        public override int GetCurrentProgress()
-        {
+        public override int GetCurrentProgress() {
             if (_currMapNum == -1)
                 return 0;
-            
+
             var baseValue = _currMapNum * 4;
-            
+
             if (_currMapLoadedCompressed)
                 return baseValue + 3;
 
@@ -80,32 +71,27 @@ namespace BetterLoading.Stage.SaveLoad
             return baseValue;
         }
 
-        public override int GetMaximumProgress()
-        {
+        public override int GetMaximumProgress() {
             return NumMaps * 4;
         }
 
-        public override bool IsCompleted()
-        {
+        public override bool IsCompleted() {
             return _allMapsLoaded;
         }
 
-        public override void BecomeInactive()
-        {
+        public override void BecomeInactive() {
             _allMapsLoaded = false;
             _currMapNum = -1;
         }
 
-        public override void DoPatching(Harmony instance)
-        {
+        public override void DoPatching(Harmony instance) {
             instance.Patch(AccessTools.Method(typeof(Map), nameof(Map.ExposeData)), new HarmonyMethod(typeof(LoadMaps), nameof(OnMapLoadStart)));
             instance.Patch(AccessTools.Method(typeof(Map), "ExposeComponents"), new HarmonyMethod(typeof(LoadMaps), nameof(OnMapComponentsLoadStart)));
             instance.Patch(AccessTools.Method(typeof(MapFileCompressor), nameof(MapFileCompressor.ExposeData)), new HarmonyMethod(typeof(LoadMaps), nameof(OnMapCompressedDataLoadStart)), new HarmonyMethod(typeof(LoadMaps), nameof(OnMapCompressedDataLoadEnd)));
             instance.Patch(AccessTools.Method(typeof(CameraDriver), nameof(CameraDriver.Expose)), postfix: new HarmonyMethod(typeof(LoadMaps), nameof(OnAllMapsLoaded)));
         }
-        
-        public static void OnMapLoadStart(Map __instance)
-        {
+
+        public static void OnMapLoadStart(Map __instance) {
             _currMap = __instance;
             _currMapNum++;
 
@@ -114,23 +100,19 @@ namespace BetterLoading.Stage.SaveLoad
             _currMapLoadedCompressed = false;
         }
 
-        public static void OnMapComponentsLoadStart()
-        {
+        public static void OnMapComponentsLoadStart() {
             _currMapInitialized = true;
         }
 
-        public static void OnMapCompressedDataLoadStart()
-        {
+        public static void OnMapCompressedDataLoadStart() {
             _currMapLoadedComponents = true;
         }
-        
-        public static void OnMapCompressedDataLoadEnd()
-        {
+
+        public static void OnMapCompressedDataLoadEnd() {
             _currMapLoadedCompressed = true;
         }
 
-        public static void OnAllMapsLoaded()
-        {
+        public static void OnAllMapsLoaded() {
             _allMapsLoaded = true;
         }
     }

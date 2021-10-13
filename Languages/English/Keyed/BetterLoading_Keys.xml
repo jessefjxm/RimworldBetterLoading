@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+
+    <BetterLoading_InitializingHugsLib>Initializing HugsLib</BetterLoading_InitializingHugsLib>
+    <BetterLoading_InitializingMods>Initializing Mods</BetterLoading_InitializingMods>
+    <BetterLoading_Loading>Loading...</BetterLoading_Loading>
+    <BetterLoading_Current>Current: {0}</BetterLoading_Current>
+
+</LanguageData>
